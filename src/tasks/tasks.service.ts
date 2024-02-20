@@ -1,53 +1,70 @@
-import { Injectable } from '@nestjs/common';
-import { Task, TaskStatus } from './task.model';
-import { v4 as uuid } from 'uuid';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { TaskStatus } from './task-status.enum';
 import { CreateTaskDto, UpdateTaskDto } from './dto/task.dto';
+import { TaskRepository } from './task.repository';
+import { Task } from './task.entity';
+import { TaskFilterDto } from './dto/task-filter.dto';
 
 @Injectable()
 export class TasksService {
-  private tasks: Task[] = [];
+  constructor(private readonly dataRepository: TaskRepository) {}
 
-  getAllTasks(): Task[] {
-    return this.tasks;
+  async getById(id: string): Promise<Task> {
+    return this.dataRepository.getById(id);
   }
 
-  createTask(createTaskDto: CreateTaskDto): Task {
+
+  // async getAllTasks(): Promise<Task[]> {
+  //   return this.dataRepository.find();
+  // }
+
+  async getAllTasks(filterDto: TaskFilterDto): Promise<Task[]> {
+    return this.dataRepository.getAllTask(filterDto);
+  }
+
+
+  async createTask(createTaskDto: CreateTaskDto): Promise<Task> {
     const { title, description } = createTaskDto;
 
-    const task: Task = {
-      id: uuid(),
+    const task = this.dataRepository.create({
       title,
       description,
-      status: TaskStatus.OPEN,
-    };
-    this.tasks.push(task);
+      status: TaskStatus.OPEN
+    })
+
+    await this.dataRepository.save(task);
     return task;
   }
 
-  getTaskById(id: string): Task {
-    return this.tasks.find((task) => task.id === id);
+  // getTaskById(id: string): Task {
+  //   return this.tasks.find((task) => task.id === id);
+  // }
+
+  async deleteTaskById(id: string): Promise<void> {
+    // const taskDeleted = this.dataRepository.getById(id);
+   const result = await this.dataRepository.delete(id);
+
+   if(result.affected === 0){
+      throw new NotFoundException(`Task with id "${id}" not found`)
+   }
   }
 
-  deleteTaskById(id: string) {
-    this.tasks = this.tasks.filter((task) => task.id !== id);
-  }
+  // updateTask(updateTaskDto: UpdateTaskDto, id: string): Task {
+  //   const { title, description } = updateTaskDto;
 
-  updateTask(updateTaskDto: UpdateTaskDto, id: string): Task {
-    const { title, description } = updateTaskDto;
+  //   const task: Task = {
+  //     id: uuid(),
+  //     title,
+  //     description,
+  //     status: TaskStatus.OPEN,
+  //   };
 
-    const task: Task = {
-      id: uuid(),
-      title,
-      description,
-      status: TaskStatus.OPEN,
-    };
-
-    const indexToUpdate: number = this.tasks.findIndex(
-      (task) => task.id === id,
-    );
-    if (indexToUpdate !== -1) {
-      this.tasks[indexToUpdate] = task;
-    }
-    return task;
-  }
+  //   const indexToUpdate: number = this.tasks.findIndex(
+  //     (task) => task.id === id,
+  //   );
+  //   if (indexToUpdate !== -1) {
+  //     this.tasks[indexToUpdate] = task;
+  //   }
+  //   return task;
+  // }
 }
